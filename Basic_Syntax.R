@@ -37,4 +37,16 @@ sd(b)
 var(b)
 quantile(b)
 
+#loading CSV file and checking dataset
+titanicdata <- read.csv("train.csv")
+head(titanicdata)
+View(titanicdata) #displays data in excel format
+head(titanicdata$PassengerId)
+names(titanicdata)
+str(titanicdata)
 
+class(titanicdata)
+class(titanicdata$Pclass)
+sapply(titanicdata, class)
+nrow(titanicdata)
+ncol(titanicdata)
