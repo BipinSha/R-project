@@ -50,3 +50,8 @@ class(titanicdata$Pclass)
 sapply(titanicdata, class)
 nrow(titanicdata)
 ncol(titanicdata)
+
+Name<-titanicdata["Name"]
+
+
+
