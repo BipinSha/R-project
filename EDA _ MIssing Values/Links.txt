@@ -1,0 +1,5 @@
+https://www.r-bloggers.com/exploratory-data-analysis-in-r-introduction/
+https://www.r-bloggers.com/exploratory-data-analysis-using-r-part-i/
+https://www.r-bloggers.com/part-2-simple-eda-in-r-with-inspectdf/
+https://www.r-bloggers.com/part-3b-eda-with-ggplot2/
+https://www.r-bloggers.com/interactive-panel-eda-with-3-lines-of-code/

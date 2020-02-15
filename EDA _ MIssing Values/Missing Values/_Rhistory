@@ -1,0 +1,512 @@
+tdm_sparse <- removeSparseTerms(tdm, 0.90) # remove sparse terms
+tdm_dm <- as.data.frame(as.matrix(tdm)) # count matrix
+tdm_df <- as.matrix((tdm_dm > 0) + 0) # binary instance matrix
+tdm_df <- as.data.frame(tdm_dm)
+tdm_df <- cbind(tdm_df, dfLabelledData$title) # append label column from original dataset
+namelist <- (c( "report","contractor","file","error","year","information","issue","manual","gps","wage","pay","contribution","deduction","401k","nsf","check","inquiry","adjustment","update","amendment","940","1096","1099","941","access","account","password", "spanish","score",
+"price","void","pto","process","payroll","mmb","lock","invoice","garnishment","delivery","credit","bundle","pin","online","aline","overthreshold","owner","reversal","wire","edelivery","payment","debit","discount","bank","address","change","cancel","signature","company","concern","legal","insurance","question","cpa","login","reset","run","wtwo","save", "term","jurisdiction","exception","sem","tracer","notice","federal","file","action","audit","fee","exempt","dfLabelledData$title"))
+final <- tdm_df %>% select(keywordlist)  # select columns names with the keywords for all class labels
+keywordstdm <- findFreqTerms(tdm, n = 100)
+keywordstdm <- findFreqTerms(tdm)
+keywordstdm
+keywordstdm <- findFreqTerms(tdm, 100)
+keywordstdm
+keywordstdm <- findFreqTerms(tdm, 80)
+keywordstdm
+keywordstdm <- findFreqTerms(tdm, 150)
+keywordstdm
+?findFreqTerms
+knitr::opts_chunk$set(echo = TRUE)
+try(require(tidyverse) || install.packages("tidyverse"))
+try(require(h2o) || install.packages("h2o"))
+try(require(tm) || install.packages("tm"))
+try(require(qdap) || install.packages("qdap"))
+try(require(SnowballC) || install.packages("SnowballC"))
+try(require(stringi) || install.packages("stringi"))
+try(require(quanteda) || install.packages("quanteda"))
+try(require(e1071) || install.packages("e1071"))
+library('tidyverse')
+library('h2o')
+library('tm')
+library('qdap')
+library('SnowballC')
+library('stringi')
+library('quanteda')
+library('e1071')
+# LOAD DATA FROM CSV
+rm(list=ls())
+getwd()
+#setwd("C:\\Srinivas\\ESI\\Client 360\\Text Comparison\\Text based Classifier")
+setwd("F:\\Projects\\Text Classification")
+dir()
+#dfLabelledData <- read.csv("20kMiniClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("30kMiniClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+dfLabelledData <- read.csv("50kMiniClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("MicroClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("MiniClarifyLookupTablewoSubtopic.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("Topten.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfValidation <- read.csv("Validation.csv",header = TRUE, stringsAsFactors = FALSE)
+spell_fix_list <- read.csv("spell_fix_list.csv",header = TRUE, stringsAsFactors = FALSE)
+abbrev_map <- read.csv("mapping_abbrev.csv", colClasses = "character")
+abbrev_map$FROM <- tolower(abbrev_map$FROM)
+abbrev_map$TO <- tolower(abbrev_map$TO)
+names(dfLabelledData)
+nrow(dfLabelledData)
+str(dfLabelledData)
+#nrow(dfValidation)
+#str(dfValidation)
+str(dfLabelledData)
+dfLabelledData$title <- as.factor(dfLabelledData$title) # convert title to factor
+#dfLabelledData <- dfLabelledData[,-1] # remove firt column
+#dfLabelledData <- dfLabelledData[complete.cases(dfLabelledData),]  # remove missing values if any
+dim(dfLabelledData)[1]*(0.7)  #  check for 70% of data
+table(dfLabelledData$title)
+Desc <- dfLabelledData$Description
+Desc <- tolower(Desc)
+for(i in 1:nrow(spell_fix_list))
+{
+Desc <- gsub(paste("\\<", spell_fix_list[i, "not.found"], "\\>", sep = ""), spell_fix_list[i, "replacement"],Desc)
+}
+nrow(abbrev_map)
+abbrev_map[235,"FROM"]
+abbrev_map[235,"TO"]
+for(i in 1:nrow(abbrev_map))
+{
+Desc <- gsub(paste("\\<", abbrev_map[i, "FROM"], "\\>", sep = ""), abbrev_map[i, "TO"], Desc)
+}
+#print(Desc[4075])
+sd <- VectorSource(Desc) # words vector
+#sd$content
+corpus <- Corpus(sd)  # build corpus
+#corpus[[4075]]$content
+#kwic(corpus, "w2", valuetype = "regex")
+#corpus <- tm_map(corpus, removeNumbers)  # remove numbers
+corpus <- tm_map(corpus, content_transformer(replace_abbreviation))
+corpus <- tm_map(corpus, removePunctuation) # remove puntucations
+corpus <- tm_map(corpus, stripWhitespace) # remove  white spaces
+stpw1 = readLines('https://raw.githubusercontent.com/sudhir-voleti/basic-text-analysis-shinyapp/master/data/stopwords.txt')# stopwords list
+stpw2 = tm::stopwords('english')      # tm package stop word list; tokenizer package has the same name function, hence 'tm::'
+comn  = unique(c(stpw1, stpw2))         # Union of two list
+stopwords = unique(gsub("'"," ",comn))
+corpus <- tm_map(corpus, removeWords, stopwords)
+mycorpusDict <- corpus
+#kwic(corpus, "w2")
+#corpus <- tm_map(corpus, stemDocument)  # use stem function
+#corpus <- tm_map(corpus, content_transformer(stemCompletion), dictionary  = mycorpusDict)  # use stem function
+tdm <- DocumentTermMatrix(corpus)  # build document term matrix
+keywordstdm <- findFreqTerms(tdm, lowfreq = 20, highfreq = Inf)
+len = length(keywordstdm)
+keywordstdm[len+1] = "dfLabelledData$title"
+tdm_sparse <- removeSparseTerms(tdm, 0.90) # remove sparse terms
+memory.limit()
+memory.limit(size = 50000)
+tdm_dm <- as.data.frame(as.matrix(tdm)) # count matrix
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+try(require(stringr) || install.packages("stringr"))
+try(require(gsubfn) || install.packages("gsubfn"))
+try(require(text2vec) || install.packages("text2vec"))
+try(require(ggplot2) || install.packages("ggplot2"))
+try(require(tm) || install.packages("tm"))
+try(require(wordcloud) || install.packages("wordcloud"))
+try(require(sqldf) || install.packages("sqldf"))
+try(require(tidytext) || install.packages("tidytext"))
+try(require(tidyr) || install.packages("tidyr"))
+try(require(dplyr) || install.packages("dplyr"))
+try(require(tibble) || install.packages("tibble"))
+try(require(qdap) || install.packages("qdap"))
+try(require(knitr) || install.packages("knitr"))
+try(require(neuralnet) || install.packages("neuralnet"))
+try(require(syuzhet) || install.packages("syuzhet"))
+try(require(knitr) || install.packages("knitr"))
+library(stringr)
+library(gsubfn)
+library(text2vec)
+library(tm)
+library(wordcloud)
+library(ggplot2)
+library(sqldf)
+library(tidytext)
+library(tidyr)
+library(dplyr)
+library(tibble)
+library(qdap)
+library(knitr)
+library(neuralnet)
+library(syuzhet)
+library(knitr)
+rm(list=ls())
+getwd()
+setwd("C:\\srinivas\\ESI\\Client 360\\NPS")
+knitr::opts_chunk$set(echo = TRUE)
+try(require(tidyverse) || install.packages("tidyverse"))
+try(require(h2o) || install.packages("h2o"))
+try(require(tm) || install.packages("tm"))
+try(require(qdap) || install.packages("qdap"))
+try(require(SnowballC) || install.packages("SnowballC"))
+try(require(stringi) || install.packages("stringi"))
+try(require(quanteda) || install.packages("quanteda"))
+try(require(e1071) || install.packages("e1071"))
+library('tidyverse')
+library('h2o')
+library('tm')
+library('qdap')
+library('SnowballC')
+library('stringi')
+library('quanteda')
+library('e1071')
+# LOAD DATA FROM CSV
+rm(list=ls())
+getwd()
+#setwd("C:\\Srinivas\\ESI\\Client 360\\Text Comparison\\Text based Classifier")
+setwd("F:\\Projects\\Text Classification")
+dir()
+#dfLabelledData <- read.csv("20kMiniClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("30kMiniClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+dfLabelledData <- read.csv("20kMiniClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("MicroClarifyLookupTable.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("MiniClarifyLookupTablewoSubtopic.csv", header = TRUE, stringsAsFactors = FALSE)
+#dfLabelledData <- read.csv("Topten.csv", header = TRUE, stringsAsFactors = FALSE)
+spell_fix_list <- read.csv("spell_fix_list.csv",header = TRUE, stringsAsFactors = FALSE)
+abbrev_map <- read.csv("mapping_abbrev.csv", colClasses = "character")
+abbrev_map$FROM <- tolower(abbrev_map$FROM)
+abbrev_map$TO <- tolower(abbrev_map$TO)
+names(dfLabelledData)
+nrow(dfLabelledData)
+str(dfLabelledData)
+#nrow(dfValidation)
+#str(dfValidation)
+str(dfLabelledData)
+dfLabelledData$title <- as.factor(dfLabelledData$title) # convert title to factor
+#dfLabelledData <- dfLabelledData[,-1] # remove firt column
+#dfLabelledData <- dfLabelledData[complete.cases(dfLabelledData),]  # remove missing values if any
+dim(dfLabelledData)[1]*(0.7)  #  check for 70% of data
+table(dfLabelledData$title)
+Desc <- dfLabelledData$Description
+Desc <- tolower(Desc)
+for(i in 1:nrow(spell_fix_list))
+{
+Desc <- gsub(paste("\\<", spell_fix_list[i, "not.found"], "\\>", sep = ""), spell_fix_list[i, "replacement"],Desc)
+}
+nrow(abbrev_map)
+abbrev_map[235,"FROM"]
+abbrev_map[235,"TO"]
+for(i in 1:nrow(abbrev_map))
+{
+Desc <- gsub(paste("\\<", abbrev_map[i, "FROM"], "\\>", sep = ""), abbrev_map[i, "TO"], Desc)
+}
+#print(Desc[4075])
+sd <- VectorSource(Desc) # words vector
+#sd$content
+corpus <- Corpus(sd)  # build corpus
+#corpus[[4075]]$content
+#kwic(corpus, "w2", valuetype = "regex")
+#corpus <- tm_map(corpus, removeNumbers)  # remove numbers
+corpus <- tm_map(corpus, content_transformer(replace_abbreviation))
+corpus <- tm_map(corpus, removePunctuation) # remove puntucations
+corpus <- tm_map(corpus, stripWhitespace) # remove  white spaces
+stpw1 = readLines('https://raw.githubusercontent.com/sudhir-voleti/basic-text-analysis-shinyapp/master/data/stopwords.txt')# stopwords list
+stpw2 = tm::stopwords('english')      # tm package stop word list; tokenizer package has the same name function, hence 'tm::'
+comn  = unique(c(stpw1, stpw2))         # Union of two list
+stopwords = unique(gsub("'"," ",comn))
+corpus <- tm_map(corpus, removeWords, stopwords)
+mycorpusDict <- corpus
+#kwic(corpus, "w2")
+#corpus <- tm_map(corpus, stemDocument)  # use stem function
+#corpus <- tm_map(corpus, content_transformer(stemCompletion), dictionary  = mycorpusDict)  # use stem function
+tdm <- DocumentTermMatrix(corpus)  # build document term matrix
+keywordstdm <- findFreqTerms(tdm, lowfreq = 20, highfreq = Inf)
+len = length(keywordstdm)
+keywordstdm[len+1] = "dfLabelledData$title"
+tdm_sparse <- removeSparseTerms(tdm, 0.90) # remove sparse terms
+memory.limit()
+#memory.limit(size = 50000)
+#tdm_sparse
+tdm_dm <- as.data.frame(as.matrix(tdm)) # count matrix
+#tdm_dm
+#write.csv(tdm_dm,file="TdmOutput.csv", row.names = F)
+tdm_df <- as.matrix((tdm_dm > 0) + 0) # binary instance matrix
+memory.limit()
+#memory.size(max = 10000)
+tdm_df <- as.data.frame(tdm_dm)
+tdm_df <- cbind(tdm_df, dfLabelledData$title) # append label column from original dataset
+#tdm_df
+#namelist <- (c( "report","contractor","filing","error","year","information","issue","manual","reprint","gps","wages","pay","contribution#","deduction","401k","nsf","check","inquiry","adjustment","updates","amendment","940","1096","1099","941","access","fsdd","account","loc#ked","dfLabelledData$title"))
+#namelist <- (c("Banking","Billing","CO Maintenance","CPA","Delivery","Earning/Deduction","EE Mainteance","EE Maintenance","GL","HRS","Implementation","Other","Payroll","PR Mistake","PTO","Question/Inquiry","Reports","Sales","Tax","TLM","WC","Web Assistance","WGPS","Y/E","dfLabelledData$title"))
+namelist <- (c( "report","contractor","file","error","year","information","issue","manual","gps","wage","pay","contribution","deduction","401k","nsf","check","inquiry","adjustment","update","amendment","940","1096","1099","941","access","account","password", "spanish","score",
+"price","void","pto","process","payroll","mmb","lock","invoice","garnishment","delivery","credit","bundle","pin","online","aline","overthreshold","owner","reversal","wire","edelivery","payment","debit","discount","bank","address","change","cancel","signature","company","concern","legal","insurance","question","cpa","login","reset","run","wtwo","save", "term","jurisdiction","exception","sem","tracer","notice","federal","file","action","audit","fee","exempt","dfLabelledData$title"))
+#namelist
+#tdm_df
+#final <- tdm_df %>% select(namelist)  # select columns names with the keywords for all class labels
+final <- tdm_df %>% select(keywordstdm)  # select columns names with the keywords for all class labels
+#final <- tdm_df %>% select(as.String(term_count))
+s <- sample(1:nrow(final), nrow(final)*(0.70), replace = FALSE) # random sampling
+train <- final[s,] # training set
+test <- final[-s,] # testing set
+localH2O <- h2o.init(nthreads = -1)
+h2o.init()
+h2o.removeAll()
+train.h2o <- as.h2o(train) # Train set converted to h2o dataframe
+test.h2o <- as.h2o(test) # Test set converted to h2o dataframe
+colnames(train.h2o)
+y.dep <- 582
+x.indep <- c(1:581) # Independent variables
+gbm <- h2o.gbm(y=y.dep, x=x.indep, training_frame = train.h2o,
+ntrees=500, learn_rate=0.1, stopping_rounds = 5, seed = 1234)
+#summary(gbm)
+h2o.performance(gbm)
+h2o.performance(gbm, test.h2o)
+pred.test <- as.data.frame(h2o.predict(gbm, test.h2o))
+#pred.test$predict
+#test$`dfLabelledData$title`
+#pred.test$predict
+test$`dfLabelledData$title`[0]
+pred.test$predict[0]
+test$`dfLabelledData$title`[6000]
+pred.test$predict[6000]
+test$`dfLabelledData$title`[6000]
+pred.test$predict[6001]
+nrow(test)
+nrow(test.h2o)
+nrow(pred.test)
+sub_gbmtest <- data.frame(ActualTitle = test$`dfLabelledData$title`  , Prediction=pred.test$predict)
+version
+install.packages("stringr")
+knitr::opts_chunk$set(echo = TRUE)
+try(require(knitr) || install.packages("knitr"))
+try(require(stringi) || install.packages("stringi"))
+library(knitr)
+library(stringi)
+try(require(knitr) || install.packages("knitr"))
+try(require(stringi) || install.packages("stringi"))
+try(require(stringr) || install.packages("stringr"))
+library(knitr)
+library(stringi)
+library(stringr)
+rm(list=ls())
+getwd()
+setwd("F:\\Projects\\Predict Doctors Fee\\Final Participant Data Folder")
+getwd()
+dir()
+dfTrainData <- read.csv("Final_Train.csv", header = TRUE, stringsAsFactors = FALSE)
+dfTrainData
+numRow = nrow(dfTrainData)
+numRow
+str(dfTrainData)
+head(dfTrainData)
+dfTrainData$NumFeedbacks = 0
+dfTrainData$SpecialInfo = ""
+dfTrainData$Experience <- gsub(' years experience', '', dfTrainData$Experience)
+dfTrainData$Experience = as.numeric(dfTrainData$Experience)
+dfTrainData$NumFeedbacks = ""
+for(i in 1:nrow(dfTrainData))
+{
+if (grepl("Feedback", dfTrainData$Miscellaneous_Info[i])==TRUE)
+{
+dfTrainData$NumFeedbacks =  stri_trim_right(dfTrainData$Miscellaneous_Info[i],pattern = "Feedback")
+}
+}
+for(i in 1:nrow(dfTrainData))
+{
+if (grepl("Feedback", dfTrainData$Miscellaneous_Info[i])==TRUE)
+{
+dfTrainData$NumFeedbacks =  stri_trim_right(dfTrainData$Miscellaneous_Info[i],pattern = " ")
+}
+}
+stri_trim_right("123 Rasfglllll dssadsa ", pattern = "123")
+s = "TGAS_1121"
+s1 = unlist(strsplit(s, split='_', fixed=TRUE))[2]
+s1
+gsub('([A-z]+) .*', '\\1', 'my string is sad')
+gsub('([A-z]+)sad.*', '\\1', 'my string is sad')
+gsub('([A-z]+) .*', '\\1', 'my string is sad')
+gsub('([A-z]+)is.*', '\\1', 'my string is sad')
+?gsub
+gsub('([A-z]+).*', '\\1', 'my string is sad')
+gsub('([A-z]+).*', '1', 'my string is sad')
+gsub('([A-z]+).*', '\1', 'my string is sad')
+gsub('([A-z]+).*', '\\1', 'my string is sad')
+?strsplit
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = FALSE)
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1]
+y = strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1]
+y = strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1]
+y[0]
+y[1]
+y = strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1]
+y[0]
+y[1]
+y[1][0]
+y[0][0]
+y[1][0]
+y[1][1]
+y = strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[0]
+y
+y[0][0]
+y[0][1]
+y[1][0]
+y
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[0]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1][0]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1][1]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1][2]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1][1]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1][1][0]
+strsplit("xys 16 Feedback Do my job", "Feedback", fixed = TRUE)[1]
+?stri_split()
+stri_split("xys 16 Feedback Do my job", "Feedback")
+stri_split_fixed("xys 16 Feedback Do my job", "Feedback")
+stri_split_fixed("xys 16 Feedback Do my job", "Feedback")
+y = stri_split_fixed("xys 16 Feedback Do my job", "Feedback")
+y
+y[0]
+y[0][0]
+y[0][0]
+y[0][0]
+y[1][0]
+y[1][1]
+y[1][1][0]
+y
+z = stri_split_fixed("a_b_c_d", "_")
+z
+z = stri_split_fixed("xys 16 Feedback Do my job", "Feedback")
+z
+stri_trim_right("123 Rasfglllll dssadsa ", pattern = "123")
+?str_sub
+?str_subset()
+fruit <- c("apple", "banana", "pear", "pinapple")
+str_subset(fruit, "a")
+str_which(fruit, "a")
+counts <- rnbinom(10000,mu=0.92,size=1.1)
+counts[1:30]
+table(counts)
+data(iris)
+str(iris)
+library(plyr)
+library(corrplot)
+library(ggplot2)
+install.packages("ggplot2")
+library(ggplot2)
+library(gridExtra)
+library(ggthemes)
+library(caret)
+library(MASS)
+library(randomForest)
+library(party)
+install.packages("party")
+library(party)
+install.packages("strucchange")
+install.packages("party")
+library(party)
+install.packages("rlang")
+library(rlang)
+install.packages("scales")
+library(scales)
+install.packages("ggplot2")
+install.packages("ggplot2")
+library(rlang)
+install.packages("rlang")
+library(rlang)
+library(scales)
+library(ggplot2)
+install.packages("ggplot2")
+install.packages("ggplot2")
+install.packages("ggplot2")
+install.packages("ggplot2")
+library(plyr)
+library(corrplot)
+library(rlang)
+library(scales)
+library(ggplot2)
+install.packages("ggplot2")
+install.packages("ggplot2")
+install.packages(c("ggplot2", "ggthemes"))
+library(readr)
+setwd("F:/Bhuvaneswar/EDA & MIssing Values/Missing Values")
+salespop <- read.csv("salespop.csv",header =TRUE)
+sum(complete.cases(salespop)==FALSE)
+salespoplm<-lm(sales~.,data=salespop)
+summary(salespoplm)
+salespop$area <- as.integer(salespop$area)
+cor(salespop)
+cor(salespop,use="complete.obs")
+Marks<-c(88,95,85,NA,76,69,78,NA,70,68)
+mean(Marks)
+median(Marks)
+sd(Marks)
+Marks[is.na(Marks)]
+mean(Marks[!is.na(Marks)])
+mean(Marks,na.rm = TRUE)
+sd(Marks[!is.na(Marks)])
+Math<-Marks
+Math[is.na(Math)]<-mean(Marks[!is.na(Marks)])
+mean(Math)
+sd(Math)#### Variance decrease when we use mean imputation
+Math[is.na(Math)]<-median(Marks[!is.na(Marks)])
+install.packages("HotDeckImputation")
+install.packages("HotDeckImputation")
+require(HotDeckImputation)
+salespop1<-as.matrix(salespop)
+impute.mean(DATA=salespop1)
+library(readr)
+fitness <- read.csv("fitness0.csv",header=TRUE)
+fitness$RunPulse <- as.numeric(fitness$RunPulse)
+fitness$RunTime <- as.numeric(fitness$RunTime)
+str(fitness)
+x2onx1<-lm(RunTime~Oxygen,data=fitness)
+new<-data.frame(Oxygen=c(59.571,50.541,47.273))
+predict(x2onx1,new)
+x3onx1<-lm(RunPulse~Oxygen,data=fitness)
+predict(x3onx1,new)
+x3onx1x2<-lm(RunPulse~RunTime+Oxygen,data=fitness)
+new2<-data.frame(Oxygen=c(49.874,49.091,46.672,46.774,45.118),RunTime=c(19.874,9.091,8.672,11.774,10.118))
+predict(x3onx1x2,new2)
+library(readr)
+fitness5 <- read.csv("fitness5.csv",header=TRUE)
+require(HotDeckImputation)
+fitness1<-as.matrix(fitness5)
+impute.NN_HD(DATA=fitness1,distance="man")
+library(yaImpute)
+data(fitness)
+set.seed(1)
+set.seed(1)
+refs=sample(rownames(fitness),
++ c(1,2,3,6,7,9,10,12,13,15,16,17,20:24))
+x <- as.matrix(fitness[, 1])
+y <- fitness[, 2:3]
+raw <- yai(x = x, y = y, method = "euclidean")
+plot(raw)
+tail(impute(raw))
+install.packages("mvnmle")
+library(mvnmle)
+cov(fitness)
+mlest(fitness)
+library(readr)
+fitness2 <- read.csv("fitness2.csv",header=TRUE)
+install.packages("mice")
+library(mice)
+library(lattice)
+require(mice)
+require(lattice)
+imp<-mice(fitness2,m=5,maxit=2)
+mat<-complete(imp)
+mat
+bwplot(imp)
+install.packages("BaylorEdPsych")
+require(BaylorEdPsych)
+LittleMCAR(fitness2)
+library(mice)
+attach(airquality)
+names(airquality)
+dim(airquality)
+airquality[1:7, ]
+airqu<-airquality[-c(5,6)]
+summary(airqu)
+md.pattern(airqu)
+tempData <- mice(airqu,m=5,maxit=50,meth='pmm',seed=500)
+tempData$imp$Ozone
+completedData <- complete(tempData,1)
+install.packages("lavaan")
+library(lavaan)
+lavaan()### latent value analysis
